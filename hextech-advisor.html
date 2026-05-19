@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hextech Advisor — League & TFT Strategy</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #060A0F; font-family: Georgia, serif; color: #C8AA6E; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px 48px; }
+.app { background: #0A0E14; border: 1px solid rgba(200,155,60,0.5); border-radius: 16px; overflow: hidden; width: 100%; max-width: 680px; }
+
+/* HEADER */
+.header { background: #0D1117; border-bottom: 1px solid rgba(200,155,60,0.3); padding: 14px 18px; display: flex; align-items: center; gap: 10px; }
+.hicon { width: 32px; height: 32px; background: #1C1A0A; border: 1px solid #C89B3C; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.htitle { font-size: 16px; font-weight: 700; color: #C89B3C; letter-spacing: 2px; text-transform: uppercase; }
+.hsub { font-size: 9px; color: #785A28; letter-spacing: 2px; text-transform: uppercase; }
+.patch-badge { margin-left: auto; display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+.patch-pill { padding: 3px 10px; border-radius: 4px; font-size: 10px; letter-spacing: 1px; border: 1px solid rgba(200,155,60,0.3); color: #7A6535; background: rgba(200,155,60,0.05); transition: all 0.4s; white-space: nowrap; font-family: Georgia, serif; }
+.patch-pill.loaded { border-color: #C89B3C; color: #C89B3C; background: rgba(200,155,60,0.1); }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: #22C55E; animation: pulse 2s infinite; flex-shrink: 0; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+/* TABS */
+.tabs { display: flex; padding: 10px 14px; gap: 6px; background: #0D1117; border-bottom: 1px solid rgba(200,155,60,0.2); flex-wrap: wrap; }
+.tab { padding: 6px 13px; border: 1px solid rgba(200,155,60,0.2); border-radius: 5px; cursor: pointer; font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #7A6535; background: transparent; transition: all 0.2s; font-family: Georgia, serif; white-space: nowrap; }
+.tab:hover { border-color: #C89B3C; color: #C8AA6E; }
+.tab.active { border-color: #C89B3C; color: #C89B3C; background: rgba(200,155,60,0.08); }
+.tab.tft.active { border-color: #0BC4E3; color: #0BC4E3; background: rgba(11,196,227,0.08); }
+.tab.arena.active { border-color: #A855F7; color: #A855F7; background: rgba(168,85,247,0.08); }
+
+/* BODY */
+.body { padding: 16px; }
+.hint { font-size: 11px; color: #4A5568; line-height: 1.6; margin-bottom: 14px; padding: 8px 12px; border-left: 2px solid #785A28; background: rgba(200,155,60,0.03); border-radius: 0 6px 6px 0; }
+.hint.tft { border-left-color: #064E5C; }
+.hint.arena { border-left-color: #4B1D7A; }
+
+/* FORM */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+@media (max-width: 500px) { .grid2 { grid-template-columns: 1fr; } }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #7A6535; }
+.field input, .field select, .field textarea { background: #131922; border: 1px solid rgba(200,155,60,0.2); border-radius: 6px; color: #C8AA6E; font-family: Georgia, serif; font-size: 13px; padding: 8px 10px; width: 100%; outline: none; resize: vertical; -webkit-appearance: none; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: #C89B3C; }
+.field.tft input:focus, .field.tft select:focus, .field.tft textarea:focus { border-color: #0BC4E3; }
+.field.arena input:focus, .field.arena select:focus, .field.arena textarea:focus { border-color: #A855F7; }
+.field select option { background: #131922; }
+.field textarea { min-height: 58px; }
+.mb { margin-bottom: 12px; }
+.go { width: 100%; padding: 12px; border: none; border-radius: 7px; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; cursor: pointer; font-family: Georgia, serif; transition: opacity 0.2s; margin-top: 6px; background: linear-gradient(90deg, #785A28, #C89B3C, #785A28); color: #0A0E14; min-height: 44px; }
+.go.tft { background: linear-gradient(90deg, #064E5C, #0BC4E3, #064E5C); }
+.go.arena { background: linear-gradient(90deg, #4B1D7A, #A855F7, #4B1D7A); }
+.go:hover { opacity: 0.88; }
+.go:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* AUTOCOMPLETE */
+.ac-wrap { position: relative; }
+.ac-dropdown { position: absolute; top: calc(100% + 3px); left: 0; right: 0; background: #131922; border: 1px solid #C89B3C; border-radius: 6px; z-index: 999; max-height: 190px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.7); display: none; }
+.ac-dropdown.open { display: block; }
+.ac-item { padding: 7px 11px; font-size: 13px; color: #C8AA6E; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; transition: background 0.1s; }
+.ac-item:hover, .ac-item.selected { background: rgba(200,155,60,0.12); color: #E8C96A; }
+.ac-item .ac-match { color: #C89B3C; font-weight: 700; }
+.ac-icon { font-size: 10px; color: #785A28; background: rgba(200,155,60,0.08); border: 1px solid rgba(200,155,60,0.2); border-radius: 3px; padding: 1px 5px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; flex-shrink: 0; }
+.ac-empty { padding: 9px 11px; font-size: 12px; color: #4A5568; font-style: italic; }
+.ac-dropdown::-webkit-scrollbar { width: 4px; }
+.ac-dropdown::-webkit-scrollbar-track { background: #0D1117; }
+.ac-dropdown::-webkit-scrollbar-thumb { background: #785A28; border-radius: 2px; }
+
+/* LOADING */
+.loading-panel { display: none; margin-top: 14px; background: #0D1117; border: 1px solid rgba(200,155,60,0.2); border-radius: 10px; overflow: hidden; }
+.loading-panel.show { display: block; }
+.loading-header { padding: 10px 14px; border-bottom: 1px solid rgba(200,155,60,0.1); display: flex; align-items: center; gap: 8px; }
+.loading-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #785A28; }
+.spin { display: inline-block; width: 11px; height: 11px; border: 1.5px solid rgba(200,155,60,0.2); border-top-color: #C89B3C; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-steps { padding: 10px 14px; display: flex; flex-direction: column; gap: 7px; }
+.lstep { display: flex; align-items: center; gap: 9px; font-size: 12px; }
+.lstep .step-icon { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid rgba(200,155,60,0.2); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 9px; color: #4A5568; transition: all 0.3s; }
+.lstep .step-text { color: #4A5568; transition: color 0.3s; }
+.lstep.active .step-icon { border-color: #C89B3C; background: rgba(200,155,60,0.1); }
+.lstep.active .step-icon::after { content:''; display:block; width:8px; height:8px; border:1px solid rgba(200,155,60,0.2); border-top-color:#C89B3C; border-radius:50%; animation:spin 0.7s linear infinite; }
+.lstep.active .step-text { color: #C89B3C; }
+.lstep.done .step-icon { border-color:#22C55E; background:rgba(34,197,94,0.1); color:#22C55E; }
+.lstep.done .step-icon::after { content:'✓'; display:block; font-size:9px; font-weight:700; animation:none; border:none; width:auto; height:auto; }
+.lstep.done .step-text { color: #785A28; }
+.lstep.tft-active .step-icon { border-color:#0BC4E3; background:rgba(11,196,227,0.08); }
+.lstep.tft-active .step-icon::after { content:''; display:block; width:8px; height:8px; border:1px solid rgba(11,196,227,0.2); border-top-color:#0BC4E3; border-radius:50%; animation:spin 0.7s linear infinite; }
+.lstep.tft-active .step-text { color: #0BC4E3; }
+
+/* RESULTS */
+.result { margin-top: 14px; display: none; }
+.result.show { display: block; }
+.result-panels { display: flex; flex-direction: column; gap: 10px; }
+.rcard { background: #0D1117; border: 1px solid rgba(200,155,60,0.2); border-radius: 10px; overflow: hidden; }
+.rcard-head { padding: 9px 14px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(200,155,60,0.1); }
+.rcard-head .icon { font-size: 13px; }
+.rcard-head .label { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #785A28; flex: 1; }
+.rcard-head .patch-tag { font-size: 10px; padding: 2px 8px; border-radius: 3px; background: rgba(200,155,60,0.1); border: 1px solid rgba(200,155,60,0.3); color: #C89B3C; }
+.rcard-body { padding: 12px 14px; font-size: 13px; line-height: 1.75; color: #C8AA6E; }
+.items-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.item-chip { display: flex; align-items: center; gap: 6px; background: #131922; border: 1px solid rgba(200,155,60,0.25); border-radius: 6px; padding: 5px 10px; font-size: 12px; color: #C8AA6E; }
+.item-num { width: 19px; height: 19px; border-radius: 50%; background: rgba(200,155,60,0.15); border: 1px solid rgba(200,155,60,0.35); font-size: 10px; color: #C89B3C; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-weight: 700; }
+.item-note { font-size: 11px; color: #785A28; }
+@media (max-width: 480px) { .item-note { display: none; } }
+.runes-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.rune-chip { padding: 4px 10px; border-radius: 4px; font-size: 11px; border: 1px solid; }
+.rune-primary { border-color: rgba(200,155,60,0.4); color: #C89B3C; background: rgba(200,155,60,0.08); }
+.rune-secondary { border-color: rgba(120,90,40,0.4); color: #785A28; background: rgba(120,90,40,0.06); }
+.rune-shard { border-color: rgba(74,85,104,0.4); color: #4A5568; background: rgba(74,85,104,0.05); font-size: 10px; }
+.skill-order { display: flex; align-items: center; gap: 5px; margin-top: 4px; flex-wrap: wrap; }
+.skill-key { width: 28px; height: 28px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; border: 1px solid; }
+.sk-q { border-color: rgba(11,196,227,0.5); color: #0BC4E3; background: rgba(11,196,227,0.08); }
+.sk-w { border-color: rgba(168,85,247,0.5); color: #A855F7; background: rgba(168,85,247,0.08); }
+.sk-e { border-color: rgba(34,197,94,0.5); color: #22C55E; background: rgba(34,197,94,0.08); }
+.sk-r { border-color: rgba(239,68,68,0.5); color: #EF4444; background: rgba(239,68,68,0.08); }
+.sk-arrow { color: #4A5568; font-size: 14px; }
+.tips-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.tips-list li { display: flex; gap: 8px; font-size: 13px; line-height: 1.6; }
+.tip-bullet { width: 6px; height: 6px; border-radius: 50%; background: #C89B3C; flex-shrink: 0; margin-top: 7px; }
+.tip-bullet.blue { background: #0BC4E3; }
+.win-con { font-size: 13px; line-height: 1.75; color: #C8AA6E; padding: 10px 12px; background: rgba(200,155,60,0.04); border-radius: 6px; border-left: 2px solid #C89B3C; margin-top: 4px; }
+.win-con.tft { border-left-color: #0BC4E3; background: rgba(11,196,227,0.04); }
+.src-footer { padding: 7px 14px; border-top: 1px solid rgba(200,155,60,0.08); font-size: 10px; color: #4A5568; display: flex; align-items: center; gap: 6px; }
+.src-dot { width: 5px; height: 5px; border-radius: 50%; background: #22C55E; flex-shrink: 0; }
+.comp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.comp-chip { padding: 4px 10px; border-radius: 4px; font-size: 12px; border: 1px solid rgba(11,196,227,0.35); color: #0BC4E3; background: rgba(11,196,227,0.06); }
+.comp-chip.unit { border-color: rgba(168,85,247,0.35); color: #A855F7; background: rgba(168,85,247,0.06); }
+.comp-chip.trait { border-color: rgba(34,197,94,0.35); color: #22C55E; background: rgba(34,197,94,0.06); }
+
+/* API KEY BANNER */
+.api-banner { background: #0D1117; border: 1px solid rgba(200,155,60,0.3); border-radius: 10px; padding: 14px 16px; margin: 16px; }
+.api-banner p { font-size: 12px; color: #785A28; margin-bottom: 10px; line-height: 1.6; }
+.api-banner .api-row { display: flex; gap: 8px; }
+.api-banner input { flex: 1; background: #131922; border: 1px solid rgba(200,155,60,0.25); border-radius: 6px; color: #C8AA6E; font-family: monospace; font-size: 12px; padding: 8px 10px; outline: none; }
+.api-banner input:focus { border-color: #C89B3C; }
+.api-banner button { padding: 8px 14px; background: rgba(200,155,60,0.15); border: 1px solid rgba(200,155,60,0.4); border-radius: 6px; color: #C89B3C; font-size: 11px; cursor: pointer; font-family: Georgia, serif; letter-spacing: 1px; white-space: nowrap; }
+.api-banner button:hover { background: rgba(200,155,60,0.25); }
+.api-banner .api-note { font-size: 10px; color: #4A5568; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="hicon">⚔</div>
+    <div>
+      <div class="htitle">Hextech Advisor</div>
+      <div class="hsub">Live Meta · All Modes</div>
+    </div>
+    <div class="patch-badge">
+      <div class="live-dot"></div>
+      <div class="patch-pill" id="global-patch">Patch —</div>
+    </div>
+  </div>
+
+  <!-- API KEY BANNER (shown when no key set) -->
+  <div class="api-banner" id="api-banner">
+    <p>Enter your Anthropic API key to enable live meta search. It's stored only in your browser's localStorage and never sent anywhere except the Anthropic API.</p>
+    <div class="api-row">
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." />
+      <button onclick="saveKey()">Save Key</button>
+    </div>
+    <div class="api-note">Get a key at console.anthropic.com → API Keys. Usage costs apply per query (typically &lt;$0.01).</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setMode('rift')">Rift</button>
+    <button class="tab" onclick="setMode('aram')">ARAM</button>
+    <button class="tab" onclick="setMode('mayhem')">Mayhem</button>
+    <button class="tab arena" onclick="setMode('arena')">Arena</button>
+    <button class="tab tft" onclick="setMode('tft')">TFT</button>
+  </div>
+
+  <!-- RIFT -->
+  <div class="body" id="panel-rift">
+    <div class="hint">Current patch builds, runes and matchup tips — searched live from METAsrc and Mobalytics.</div>
+    <div class="grid2 mb">
+      <div class="field"><label>Your Champion</label><div class="ac-wrap"><input id="rift-champ" placeholder="Search champion..." autocomplete="off" oninput="acInput(this,'rift-champ-dd')" onkeydown="acKey(event,'rift-champ-dd')" onfocus="acInput(this,'rift-champ-dd')" /><div class="ac-dropdown" id="rift-champ-dd"></div></div></div>
+      <div class="field"><label>Role</label><select id="rift-role"><option value="top">Top</option><option value="jungle">Jungle</option><option value="mid" selected>Mid</option><option value="bot">Bot (ADC)</option><option value="support">Support</option></select></div>
+    </div>
+    <div class="grid2 mb">
+      <div class="field"><label>Skill Level</label><select id="rift-skill"><option value="new">New to Champion</option><option value="casual" selected>Casual / Average</option><option value="experienced">Experienced</option><option value="otp">One-Trick / Expert</option></select></div>
+      <div class="field"><label>Rank</label><select id="rift-rank"><option value="iron-bronze">Iron / Bronze</option><option value="silver-gold" selected>Silver / Gold</option><option value="plat-emerald">Plat / Emerald</option><option value="diamond+">Diamond+</option></select></div>
+    </div>
+    <div class="field mb"><label>Enemy Laner</label><div class="ac-wrap"><input id="rift-enemy" placeholder="Search champion..." autocomplete="off" oninput="acInput(this,'rift-enemy-dd')" onkeydown="acKey(event,'rift-enemy-dd')" onfocus="acInput(this,'rift-enemy-dd')" /><div class="ac-dropdown" id="rift-enemy-dd"></div></div></div>
+    <div class="grid2 mb">
+      <div class="field"><label>Ally Team (optional)</label><textarea id="rift-allies" placeholder="e.g. Jarvan, Orianna, Caitlyn, Thresh"></textarea></div>
+      <div class="field"><label>Enemy Team (optional)</label><textarea id="rift-enemies" placeholder="e.g. Vi, LeBlanc, Tristana, Blitzcrank"></textarea></div>
+    </div>
+    <button class="go" onclick="getAdvice('rift')">Get Rift Advice ↗</button>
+    <div class="loading-panel" id="loading-rift"><div class="loading-header"><div class="spin"></div><div class="loading-title">Searching live meta...</div></div><div class="loading-steps" id="steps-rift"></div></div>
+    <div class="result" id="result-rift"><div class="result-panels" id="panels-rift"></div></div>
+  </div>
+
+  <!-- ARAM -->
+  <div class="body" id="panel-aram" style="display:none">
+    <div class="hint">Optimal ARAM builds — live from METAsrc ARAM and Mobalytics, tuned to your full team vs enemies.</div>
+    <div class="grid2 mb">
+      <div class="field"><label>Your Champion</label><div class="ac-wrap"><input id="aram-champ" placeholder="Search champion..." autocomplete="off" oninput="acInput(this,'aram-champ-dd')" onkeydown="acKey(event,'aram-champ-dd')" onfocus="acInput(this,'aram-champ-dd')" /><div class="ac-dropdown" id="aram-champ-dd"></div></div></div>
+      <div class="field"><label>Skill Level</label><select id="aram-skill"><option value="new">New to Champion</option><option value="casual" selected>Casual / Average</option><option value="experienced">Experienced</option><option value="otp">One-Trick / Expert</option></select></div>
+    </div>
+    <div class="field mb"><label>Your Team (other 4)</label><textarea id="aram-allies" placeholder="e.g. Ziggs, Ashe, Sona, Amumu"></textarea></div>
+    <div class="field mb"><label>Enemy Team (all 5)</label><textarea id="aram-enemies" placeholder="e.g. Zed, Malzahar, Warwick, Caitlyn, Soraka"></textarea></div>
+    <button class="go" onclick="getAdvice('aram')">Get ARAM Advice ↗</button>
+    <div class="loading-panel" id="loading-aram"><div class="loading-header"><div class="spin"></div><div class="loading-title">Searching live meta...</div></div><div class="loading-steps" id="steps-aram"></div></div>
+    <div class="result" id="result-aram"><div class="result-panels" id="panels-aram"></div></div>
+  </div>
+
+  <!-- MAYHEM -->
+  <div class="body" id="panel-mayhem" style="display:none">
+    <div class="hint">ARAM Mayhem builds — faster pace, augments, live from METAsrc Mayhem.</div>
+    <div class="grid2 mb">
+      <div class="field"><label>Your Champion</label><div class="ac-wrap"><input id="mayhem-champ" placeholder="Search champion..." autocomplete="off" oninput="acInput(this,'mayhem-champ-dd')" onkeydown="acKey(event,'mayhem-champ-dd')" onfocus="acInput(this,'mayhem-champ-dd')" /><div class="ac-dropdown" id="mayhem-champ-dd"></div></div></div>
+      <div class="field"><label>Skill Level</label><select id="mayhem-skill"><option value="new">New to Champion</option><option value="casual" selected>Casual / Average</option><option value="experienced">Experienced</option><option value="otp">One-Trick / Expert</option></select></div>
+    </div>
+    <div class="field mb"><label>Your Team</label><textarea id="mayhem-allies" placeholder="e.g. Brand, Ryze, Orianna, Blitzcrank"></textarea></div>
+    <div class="field mb"><label>Enemy Team</label><textarea id="mayhem-enemies" placeholder="e.g. Darius, Garen, Nunu, Miss Fortune, Lulu"></textarea></div>
+    <button class="go" onclick="getAdvice('mayhem')">Get Mayhem Advice ↗</button>
+    <div class="loading-panel" id="loading-mayhem"><div class="loading-header"><div class="spin"></div><div class="loading-title">Searching live meta...</div></div><div class="loading-steps" id="steps-mayhem"></div></div>
+    <div class="result" id="result-mayhem"><div class="result-panels" id="panels-mayhem"></div></div>
+  </div>
+
+  <!-- ARENA -->
+  <div class="body" id="panel-arena" style="display:none">
+    <div class="hint">Arena 2v2v2v2 builds and augment priorities — live from METAsrc Arena and Mobalytics.</div>
+    <div class="grid2 mb">
+      <div class="field arena"><label>Your Champion</label><div class="ac-wrap"><input id="arena-champ" placeholder="Search champion..." autocomplete="off" oninput="acInput(this,'arena-champ-dd')" onkeydown="acKey(event,'arena-champ-dd')" onfocus="acInput(this,'arena-champ-dd')" /><div class="ac-dropdown" id="arena-champ-dd"></div></div></div>
+      <div class="field arena"><label>Duo Partner</label><div class="ac-wrap"><input id="arena-ally" placeholder="Search champion..." autocomplete="off" oninput="acInput(this,'arena-ally-dd')" onkeydown="acKey(event,'arena-ally-dd')" onfocus="acInput(this,'arena-ally-dd')" /><div class="ac-dropdown" id="arena-ally-dd"></div></div></div>
+    </div>
+    <div class="grid2 mb">
+      <div class="field arena"><label>Skill Level</label><select id="arena-skill"><option value="new">New to Champion</option><option value="casual" selected>Casual / Average</option><option value="experienced">Experienced</option><option value="otp">One-Trick / Expert</option></select></div>
+      <div class="field arena"><label>Known Enemies (optional)</label><div class="ac-wrap"><input id="arena-enemies" placeholder="Search champion..." autocomplete="off" oninput="acInput(this,'arena-enemies-dd')" onkeydown="acKey(event,'arena-enemies-dd')" onfocus="acInput(this,'arena-enemies-dd')" /><div class="ac-dropdown" id="arena-enemies-dd"></div></div></div>
+    </div>
+    <div class="field arena mb"><label>Current Augments</label><textarea id="arena-augments" placeholder="e.g. Celestial Body, Deft..."></textarea></div>
+    <button class="go arena" onclick="getAdvice('arena')">Get Arena Advice ↗</button>
+    <div class="loading-panel" id="loading-arena"><div class="loading-header"><div class="spin"></div><div class="loading-title">Searching live meta...</div></div><div class="loading-steps" id="steps-arena"></div></div>
+    <div class="result" id="result-arena"><div class="result-panels" id="panels-arena"></div></div>
+  </div>
+
+  <!-- TFT -->
+  <div class="body" id="panel-tft" style="display:none">
+    <div class="hint tft">TFT comp recommendations — live from MetaTFT, BunnyMuffins, and Mobalytics.</div>
+    <div class="grid2 mb">
+      <div class="field tft"><label>Current Stage</label><select id="tft-stage"><option value="2">Stage 2 (early)</option><option value="3" selected>Stage 3 (mid)</option><option value="4">Stage 4 (late)</option><option value="4-5">Stage 4-5+ (end game)</option></select></div>
+      <div class="field tft"><label>Gold / HP</label><input id="tft-gold" placeholder="e.g. 42g / 72 HP" /></div>
+    </div>
+    <div class="field tft mb"><label>Starting Loot &amp; Augments</label><textarea id="tft-loot" placeholder="e.g. Rabadon's, BF Sword. Augments: Gold Reserve..."></textarea></div>
+    <div class="field tft mb"><label>Active Traits / Constellations</label><textarea id="tft-traits" placeholder="e.g. Space Gods 2, Stargazer 3, Bruiser 4..."></textarea></div>
+    <div class="field tft mb"><label>Current Units on Board</label><textarea id="tft-units" placeholder="e.g. Vex, Samira, Alistar (2★), Gwen..."></textarea></div>
+    <button class="go tft" onclick="getAdvice('tft')">Get TFT Advice ↗</button>
+    <div class="loading-panel" id="loading-tft"><div class="loading-header"><div class="spin"></div><div class="loading-title">Searching live meta...</div></div><div class="loading-steps" id="steps-tft"></div></div>
+    <div class="result" id="result-tft"><div class="result-panels" id="panels-tft"></div></div>
+  </div>
+</div>
+
+<script>
+// ── API KEY MANAGEMENT ───────────────────────────────────────────────────────
+function saveKey() {
+  const val = document.getElementById('api-key-input').value.trim();
+  if (!val.startsWith('sk-')) { alert('Please enter a valid Anthropic API key (starts with sk-ant-...)'); return; }
+  localStorage.setItem('hextech_api_key', val);
+  document.getElementById('api-banner').style.display = 'none';
+}
+function getKey() { return localStorage.getItem('hextech_api_key') || ''; }
+window.addEventListener('DOMContentLoaded', () => {
+  if (getKey()) document.getElementById('api-banner').style.display = 'none';
+});
+
+// ── CHAMPION ROSTER ──────────────────────────────────────────────────────────
+const CHAMPIONS = [
+  "Aatrox","Ahri","Akali","Akshan","Alistar","Ambessa","Amumu","Anivia","Annie","Aphelios",
+  "Ashe","Aurelion Sol","Aurora","Azir","Bard","Bel'Veth","Blitzcrank","Brand","Braum","Briar",
+  "Caitlyn","Camille","Cassiopeia","Cho'Gath","Corki","Darius","Diana","Dr. Mundo","Draven","Ekko",
+  "Elise","Evelynn","Ezreal","Fiddlesticks","Fiora","Fizz","Galio","Gangplank","Garen","Gnar",
+  "Gragas","Graves","Gwen","Hecarim","Heimerdinger","Hwei","Illaoi","Irelia","Ivern","Janna",
+  "Jarvan IV","Jax","Jayce","Jhin","Jinx","K'Sante","Kai'Sa","Kalista","Karma","Karthus",
+  "Kassadin","Katarina","Kayle","Kayn","Kennen","Kha'Zix","Kindred","Kled","Kog'Maw","LeBlanc",
+  "Lee Sin","Leona","Lillia","Lissandra","Lucian","Lulu","Lux","Malphite","Malzahar","Maokai",
+  "Master Yi","Milio","Miss Fortune","Mordekaiser","Morgana","Naafiri","Nami","Nasus","Nautilus","Neeko",
+  "Nidalee","Nilah","Nocturne","Nunu & Willump","Olaf","Orianna","Ornn","Pantheon","Poppy","Pyke",
+  "Qiyana","Quinn","Rakan","Rammus","Rek'Sai","Rell","Renata Glasc","Renekton","Rengar","Riven",
+  "Rumble","Ryze","Samira","Sejuani","Senna","Seraphine","Sett","Shaco","Shen","Shyvana",
+  "Singed","Sion","Sivir","Skarner","Smolder","Sona","Soraka","Swain","Sylas","Syndra",
+  "Tahm Kench","Taliyah","Talon","Taric","Teemo","Thresh","Tristana","Trundle","Tryndamere","Twisted Fate",
+  "Twitch","Udyr","Urgot","Varus","Vayne","Veigar","Vel'Koz","Vex","Vi","Viego",
+  "Viktor","Vladimir","Volibear","Warwick","Wukong","Xayah","Xerath","Xin Zhao","Yasuo","Yone",
+  "Yorick","Yuumi","Zac","Zed","Zeri","Ziggs","Zilean","Zoe","Zyra"
+];
+const ROLE_MAP = {
+  "Aatrox":"top","Ahri":"mid","Akali":"mid","Alistar":"sup","Amumu":"jng","Aphelios":"bot",
+  "Ashe":"bot","Bard":"sup","Blitzcrank":"sup","Brand":"sup","Braum":"sup","Caitlyn":"bot",
+  "Camille":"top","Cho'Gath":"top","Darius":"top","Diana":"jng","Draven":"bot","Ekko":"jng",
+  "Ezreal":"bot","Fiora":"top","Fizz":"mid","Garen":"top","Gragas":"jng","Graves":"jng",
+  "Hecarim":"jng","Irelia":"top","Janna":"sup","Jarvan IV":"jng","Jax":"top","Jayce":"top",
+  "Jhin":"bot","Jinx":"bot","Kai'Sa":"bot","Karma":"sup","Karthus":"jng","Kassadin":"mid",
+  "Katarina":"mid","Kayle":"top","Kayn":"jng","Kha'Zix":"jng","Kindred":"jng","LeBlanc":"mid",
+  "Lee Sin":"jng","Leona":"sup","Lucian":"bot","Lulu":"sup","Lux":"sup","Malphite":"top",
+  "Malzahar":"mid","Master Yi":"jng","Miss Fortune":"bot","Morgana":"sup","Nami":"sup",
+  "Nautilus":"sup","Nidalee":"jng","Nocturne":"jng","Orianna":"mid","Pantheon":"sup",
+  "Pyke":"sup","Renekton":"top","Rengar":"jng","Riven":"top","Ryze":"mid","Samira":"bot",
+  "Senna":"sup","Seraphine":"sup","Sett":"top","Shaco":"jng","Shen":"top","Sivir":"bot",
+  "Sona":"sup","Soraka":"sup","Sylas":"mid","Syndra":"mid","Thresh":"sup","Tristana":"bot",
+  "Tryndamere":"top","Twisted Fate":"mid","Twitch":"bot","Vayne":"bot","Veigar":"mid",
+  "Vex":"mid","Vi":"jng","Viego":"jng","Viktor":"mid","Vladimir":"mid","Warwick":"jng",
+  "Wukong":"jng","Xerath":"sup","Xin Zhao":"jng","Yasuo":"mid","Yone":"mid","Zed":"mid",
+  "Zeri":"bot","Ziggs":"mid","Zoe":"mid","Zyra":"sup"
+};
+
+// ── AUTOCOMPLETE ─────────────────────────────────────────────────────────────
+let acActiveIdx = {};
+function acFilter(q) {
+  if (!q) return [];
+  const lq = q.toLowerCase();
+  const starts = CHAMPIONS.filter(c => c.toLowerCase().startsWith(lq));
+  const contains = CHAMPIONS.filter(c => !c.toLowerCase().startsWith(lq) && c.toLowerCase().includes(lq));
+  return [...starts, ...contains].slice(0, 8);
+}
+function hlMatch(name, q) {
+  if (!q) return name;
+  const i = name.toLowerCase().indexOf(q.toLowerCase());
+  if (i === -1) return name;
+  return name.slice(0,i) + `<span class="ac-match">${name.slice(i,i+q.length)}</span>` + name.slice(i+q.length);
+}
+function acInput(input, ddId) {
+  const dd = document.getElementById(ddId);
+  const q = input.value;
+  const res = acFilter(q);
+  acActiveIdx[ddId] = -1;
+  if (!res.length) { dd.innerHTML = q.length ? '<div class="ac-empty">No champion found</div>' : ''; dd.classList.toggle('open', q.length > 0 && res.length === 0); return; }
+  dd.innerHTML = res.map(c => `<div class="ac-item" data-name="${c}" onmousedown="acSelect('${ddId}','${c}',event)"><span>${hlMatch(c,q)}</span>${ROLE_MAP[c]?`<span class="ac-icon">${ROLE_MAP[c]}</span>`:''}</div>`).join('');
+  dd.classList.add('open');
+}
+function acSelect(ddId, name, e) {
+  if (e) e.preventDefault();
+  const dd = document.getElementById(ddId);
+  dd.previousElementSibling.value = name;
+  dd.classList.remove('open');
+}
+function acKey(e, ddId) {
+  const dd = document.getElementById(ddId);
+  const items = dd.querySelectorAll('.ac-item');
+  if (!dd.classList.contains('open') || !items.length) return;
+  let idx = acActiveIdx[ddId] ?? -1;
+  if (e.key==='ArrowDown') { e.preventDefault(); idx=Math.min(idx+1,items.length-1); }
+  else if (e.key==='ArrowUp') { e.preventDefault(); idx=Math.max(idx-1,0); }
+  else if (e.key==='Enter'&&idx>=0) { e.preventDefault(); items[idx].dispatchEvent(new MouseEvent('mousedown')); return; }
+  else if (e.key==='Escape') { dd.classList.remove('open'); return; }
+  acActiveIdx[ddId]=idx;
+  items.forEach((item,i)=>item.classList.toggle('selected',i===idx));
+  if(idx>=0) items[idx].scrollIntoView({block:'nearest'});
+}
+document.addEventListener('click', e => {
+  document.querySelectorAll('.ac-dropdown.open').forEach(dd => { if (!dd.parentElement.contains(e.target)) dd.classList.remove('open'); });
+});
+
+// ── MODE & STEPS ─────────────────────────────────────────────────────────────
+let mode = 'rift';
+let detectedPatches = {};
+const STEPS = {
+  rift:   [{text:'Fetching current patch from METAsrc'},{text:'Checking Mobalytics tier data'},{text:'Analysing matchup & team comp'},{text:'Building item & rune recommendations'}],
+  aram:   [{text:'Fetching ARAM stats from METAsrc'},{text:'Checking Mobalytics ARAM data'},{text:'Analysing team vs enemy comp'},{text:'Generating ARAM build'}],
+  mayhem: [{text:'Fetching Mayhem data from METAsrc'},{text:'Identifying top Mayhem augments'},{text:'Analysing team vs enemy comp'},{text:'Generating Mayhem build'}],
+  arena:  [{text:'Fetching Arena tier data from METAsrc'},{text:'Checking Mobalytics Arena rankings'},{text:'Evaluating duo synergy'},{text:'Ranking augment priorities'}],
+  tft:    [{text:'Searching MetaTFT for current comps'},{text:'Checking BunnyMuffins tier list'},{text:'Checking Mobalytics TFT data'},{text:'Matching comp to your loot & traits'}]
+};
+function renderSteps(m, activeIdx) {
+  const isTft = m==='tft';
+  document.getElementById('steps-'+m).innerHTML = STEPS[m].map((s,i)=>{
+    let cls='lstep';
+    if(i<activeIdx) cls+=' done';
+    else if(i===activeIdx) cls+=isTft?' tft-active':' active';
+    return `<div class="${cls}"><div class="step-icon"></div><div class="step-text">${s.text}</div></div>`;
+  }).join('');
+}
+function setMode(m) {
+  mode=m;
+  ['rift','aram','mayhem','arena','tft'].forEach(x=>{ document.getElementById('panel-'+x).style.display=x===m?'block':'none'; });
+  document.querySelectorAll('.tab').forEach((t,i)=>{ t.classList.toggle('active',['rift','aram','mayhem','arena','tft'][i]===m); });
+  const pill=document.getElementById('global-patch');
+  if(detectedPatches[m]){pill.textContent=detectedPatches[m];pill.classList.add('loaded');}
+  else{pill.textContent='Patch —';pill.classList.remove('loaded');}
+}
+function g(id){const el=document.getElementById(id);return el?el.value.trim():'';}
+const skillMap={new:'new to this champion',casual:'casual/average skill',experienced:'experienced',otp:'one-trick/expert'};
+const skillColors={Q:'sk-q',W:'sk-w',E:'sk-e',R:'sk-r'};
+const sectionIcons={build:'⚔',runes:'✦',skills:'▲',tips:'◈',wincon:'◎',comps:'⬡',units:'◆',items:'⚔',roll:'◎',traits:'✦',positioning:'▣',augments:'◈',synergy:'◎'};
+const sectionLabels={build:'Item Build',runes:'Rune Page',skills:'Skill Order',tips:'Matchup Tips',wincon:'Win Condition',comps:'Recommended Comps',units:'Core Units',items:'Item Priority',roll:'Roll Conditions',traits:'Trait Synergies',positioning:'Positioning',augments:'Augments',synergy:'Duo Synergy'};
+
+function buildPrompt(m) {
+  const base=`Respond ONLY with a JSON object — no markdown, no preamble. JSON must have "patch" string and "sections" array. Each section: "type","title","content". Types:
+build:{items:[{name,note}]}(6 items) | runes:{primary:[],secondary:[],shards:[]} | skills:{order:[Q/W/E/R...],note} | tips:{bullets:[]} | wincon:{text} | comps:{comps:[{name,why}]} | units:{chips:[]} | items:{items:[{name,target,note}]} | roll:{text} | traits:{chips:[],text} | positioning:{text} | augments:{chips:[],text} | synergy:{text}`;
+  if(m==='rift') return `Expert LoL advisor. Search metasrc.com/lol and mobalytics.gg for current patch build for "${g('rift-champ')}" ${g('rift-role')}. Skill:${skillMap[g('rift-skill')]}. Rank:${g('rift-rank')}. Enemy:${g('rift-enemy')||'unknown'}. Allies:${g('rift-allies')||'unknown'}. Enemies:${g('rift-enemies')||'unknown'}.\n${base}\nSections: build,runes,skills,tips,wincon.`;
+  if(m==='aram') return `Expert LoL ARAM advisor. Search metasrc.com/lol/aram and mobalytics.gg for current patch ARAM build for "${g('aram-champ')}". Skill:${skillMap[g('aram-skill')]}. Team:${g('aram-allies')||'unknown'}. Enemies:${g('aram-enemies')||'unknown'}.\n${base}\nSections: build,runes,skills,tips,wincon.`;
+  if(m==='mayhem') return `Expert LoL ARAM Mayhem advisor. Search metasrc.com/lol/mayhem for current patch Mayhem build for "${g('mayhem-champ')}". Skill:${skillMap[g('mayhem-skill')]}. Team:${g('mayhem-allies')||'unknown'}. Enemies:${g('mayhem-enemies')||'unknown'}.\n${base}\nSections: build,augments,skills,tips,wincon.`;
+  if(m==='arena') return `Expert LoL Arena advisor. Search metasrc.com/lol/arena and mobalytics.gg for current Arena build for "${g('arena-champ')}". Partner:${g('arena-ally')||'unknown'}. Skill:${skillMap[g('arena-skill')]}. Enemies:${g('arena-enemies')||'unknown'}. Augments:${g('arena-augments')||'none'}.\n${base}\nSections: build,augments,synergy,tips,wincon.`;
+  if(m==='tft') return `Expert TFT advisor. Search metatft.com, bunnymuffins.lol, mobalytics.gg/tft for current patch best comps. Stage:${g('tft-stage')}. Gold/HP:${g('tft-gold')||'?'}. Loot:${g('tft-loot')||'?'}. Traits:${g('tft-traits')||'?'}. Units:${g('tft-units')||'?'}.\n${base}\nSections: comps,units,items,roll,traits,positioning.`;
+}
+
+function renderSection(sec, patch, isTft) {
+  const card=document.createElement('div'); card.className='rcard';
+  const head=document.createElement('div'); head.className='rcard-head';
+  head.innerHTML=`<span class="icon">${sectionIcons[sec.type]||'◆'}</span><span class="label">${sectionLabels[sec.type]||sec.title}</span>`;
+  if(patch&&sec.type==='build'){const pt=document.createElement('span');pt.className='patch-tag';pt.textContent=patch;head.appendChild(pt);}
+  card.appendChild(head);
+  const body=document.createElement('div'); body.className='rcard-body';
+  const c=sec.content;
+  if(sec.type==='build'&&c.items){
+    const grid=document.createElement('div');grid.className='items-grid';
+    c.items.forEach((item,i)=>{const ch=document.createElement('div');ch.className='item-chip';ch.innerHTML=`<div class="item-num">${i+1}</div><span class="item-name">${item.name}</span>${item.note?`<span class="item-note">— ${item.note}</span>`:''}`;grid.appendChild(ch);});
+    body.appendChild(grid);
+    const ft=document.createElement('div');ft.className='src-footer';ft.innerHTML=`<div class="src-dot"></div>Live · ${isTft?'MetaTFT · BunnyMuffins · Mobalytics':'METAsrc · Mobalytics'}`;
+    card.appendChild(body);card.appendChild(ft);return card;
+  } else if(sec.type==='runes'&&c.primary){
+    const row=document.createElement('div');row.className='runes-row';
+    (c.primary||[]).forEach(r=>{const s=document.createElement('span');s.className='rune-chip rune-primary';s.textContent=r;row.appendChild(s);});
+    (c.secondary||[]).forEach(r=>{const s=document.createElement('span');s.className='rune-chip rune-secondary';s.textContent=r;row.appendChild(s);});
+    (c.shards||[]).forEach(r=>{const s=document.createElement('span');s.className='rune-chip rune-shard';s.textContent=r;row.appendChild(s);});
+    body.appendChild(row);
+  } else if(sec.type==='skills'&&c.order){
+    const row=document.createElement('div');row.className='skill-order';
+    c.order.forEach((sk,i)=>{if(i>0){const a=document.createElement('span');a.className='sk-arrow';a.textContent='›';row.appendChild(a);}const k=document.createElement('div');k.className=`skill-key ${skillColors[sk]||'sk-q'}`;k.textContent=sk;row.appendChild(k);});
+    body.appendChild(row);
+    if(c.note){const n=document.createElement('div');n.style.cssText='font-size:11px;color:#785A28;margin-top:8px;';n.textContent=c.note;body.appendChild(n);}
+  } else if(sec.type==='tips'&&c.bullets){
+    const ul=document.createElement('ul');ul.className='tips-list';
+    c.bullets.forEach(b=>{const li=document.createElement('li');li.innerHTML=`<div class="tip-bullet ${isTft?'blue':''}"></div><span>${b}</span>`;ul.appendChild(li);});
+    body.appendChild(ul);
+  } else if(['wincon','roll','synergy','positioning'].includes(sec.type)){
+    const d=document.createElement('div');d.className=`win-con${isTft?' tft':''}`;d.textContent=c.text||'';body.appendChild(d);
+  } else if(sec.type==='comps'&&c.comps){
+    c.comps.forEach(comp=>{const d=document.createElement('div');d.style.cssText='background:#131922;border:1px solid rgba(11,196,227,0.2);border-radius:6px;padding:8px 10px;margin-bottom:6px;';d.innerHTML=`<strong style="color:#0BC4E3;font-size:13px;">${comp.name}</strong>${comp.why?`<div style="font-size:11px;color:#4A5568;margin-top:3px;">${comp.why}</div>`:''}`;body.appendChild(d);});
+  } else if(sec.type==='units'&&c.chips){
+    const row=document.createElement('div');row.className='comp-chips';
+    c.chips.forEach(u=>{const ch=document.createElement('div');ch.className='comp-chip unit';ch.textContent=u;row.appendChild(ch);});
+    body.appendChild(row);
+  } else if(sec.type==='traits'){
+    if(c.chips){const row=document.createElement('div');row.className='comp-chips';c.chips.forEach(t=>{const ch=document.createElement('div');ch.className='comp-chip trait';ch.textContent=t;row.appendChild(ch);});body.appendChild(row);}
+    if(c.text){const n=document.createElement('div');n.style.cssText='font-size:12px;color:#C8AA6E;margin-top:8px;line-height:1.6;';n.textContent=c.text;body.appendChild(n);}
+  } else if(sec.type==='augments'){
+    if(c.chips){const row=document.createElement('div');row.className='comp-chips';c.chips.forEach(a=>{const ch=document.createElement('div');ch.className='comp-chip';ch.style.cssText='border-color:rgba(168,85,247,0.35);color:#A855F7;background:rgba(168,85,247,0.06);';ch.textContent=a;row.appendChild(ch);});body.appendChild(row);}
+    if(c.text){const n=document.createElement('div');n.style.cssText='font-size:12px;color:#C8AA6E;margin-top:8px;line-height:1.6;';n.textContent=c.text;body.appendChild(n);}
+  } else if(sec.type==='items'&&c.items){
+    const ul=document.createElement('ul');ul.className='tips-list';
+    c.items.forEach(item=>{const li=document.createElement('li');li.innerHTML=`<div class="tip-bullet blue"></div><span><strong style="color:#E8C96A">${item.name}</strong>${item.target?` → <em style="color:#785A28">${item.target}</em>`:''}${item.note?' — '+item.note:''}</span>`;ul.appendChild(li);});
+    body.appendChild(ul);
+  } else {body.innerHTML=`<div style="font-size:12px;color:#C8AA6E;">${JSON.stringify(c)}</div>`;}
+  card.appendChild(body);return card;
+}
+
+function extractPatch(text){
+  const m=text.match(/[Pp]atch\s*([\d]+\.[\d]+)/)||text.match(/\b([\d]{2}\.[\d]{1,2})\b/)||text.match(/[Ss]et\s*([\d]+(?:\.[\d]+)?)/);
+  return m?m[0].replace(/patch\s*/i,'Patch ').replace(/set\s*/i,'Set '):null;
+}
+
+async function getAdvice(m) {
+  const key = getKey();
+  if (!key) { alert('Please enter your Anthropic API key first.'); document.getElementById('api-banner').style.display='block'; return; }
+  const btn=document.querySelector('#panel-'+m+' .go');
+  const loadingPanel=document.getElementById('loading-'+m);
+  const result=document.getElementById('result-'+m);
+  const panels=document.getElementById('panels-'+m);
+  if(m!=='tft'&&!g(m+'-champ')){panels.innerHTML='<div style="padding:12px;color:#785A28;font-size:13px;">Please enter your champion first.</div>';result.className='result show';return;}
+  btn.disabled=true;result.className='result';panels.innerHTML='';
+  loadingPanel.className='loading-panel show';renderSteps(m,0);
+  let stepIdx=0;const totalSteps=STEPS[m].length;
+  const stepTimer=setInterval(()=>{stepIdx=Math.min(stepIdx+1,totalSteps-1);renderSteps(m,stepIdx);},3500);
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1500,tools:[{type:"web_search_20250305",name:"web_search"}],messages:[{role:'user',content:buildPrompt(m)}]})
+    });
+    const data=await res.json();
+    if(data.error){throw new Error(data.error.message||'API error');}
+    const raw=(data.content||[]).map(i=>i.type==='text'?i.text:'').filter(Boolean).join('\n');
+    clearInterval(stepTimer);renderSteps(m,totalSteps);
+    let parsed;
+    try{const clean=raw.replace(/```json|```/g,'').trim();parsed=JSON.parse(clean.slice(clean.indexOf('{'),clean.lastIndexOf('}')+1));}
+    catch(e){panels.innerHTML=`<div style="padding:14px;font-size:13px;color:#C8AA6E;line-height:1.7;">${raw.replace(/\*\*(.+?)\*\*/g,'<strong style="color:#E8C96A">$1</strong>').replace(/\n/g,'<br>')}</div>`;loadingPanel.className='loading-panel';result.className='result show';btn.disabled=false;return;}
+    const patch=parsed.patch||extractPatch(raw);
+    if(patch){detectedPatches[m]=patch;const pill=document.getElementById('global-patch');pill.textContent=patch;pill.classList.add('loaded');}
+    setTimeout(()=>{loadingPanel.className='loading-panel';(parsed.sections||[]).forEach(sec=>panels.appendChild(renderSection(sec,patch,m==='tft')));result.className='result show';},600);
+  } catch(e){
+    clearInterval(stepTimer);loadingPanel.className='loading-panel';
+    panels.innerHTML=`<div style="padding:12px;color:#785A28;font-size:13px;">Error: ${e.message||'Connection failed — please try again.'}</div>`;
+    result.className='result show';
+  }
+  btn.disabled=false;
+}
+</script>
+</body>
+</html>
